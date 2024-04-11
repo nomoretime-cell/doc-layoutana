@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "doc-layoutana"
+version = "0.1.0"
+description = ""
+authors = ["遥奕 <jibing.yjb@alibaba-inc.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "^2.2.2"
+transformers = "^4.39.3"
+pillow = "^10.3.0"
+python-dotenv = "^1.0.1"
+pydantic = "^2.6.4"
+pydantic-settings = "^2.2.1"
+ftfy = "^6.2.0"
+thefuzz = "^0.22.1"
+scikit-learn = "^1.4.2"
+pyfunvice = {path = "/home/yejibing/code/doc-parser/pyfunvice/dist/pyfunvice-0.1.4-py3-none-any.whl"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
