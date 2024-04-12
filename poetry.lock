@@ -909,7 +909,7 @@ description = ""
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "pyfunvice-0.1.4-py3-none-any.whl", hash = "sha256:47227a88da73af1aada1d98342f8956a356390b2f77cd67e59286ade6893efe5"},
+    {file = "pyfunvice-0.1.4-py3-none-any.whl", hash = "sha256:139aef4ff154860a11044f0aa04f92bcb9bb4200c85d5ed5870d2a48ccbd4db3"},
 ]
 
 [package.dependencies]

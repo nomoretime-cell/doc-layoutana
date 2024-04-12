@@ -11,7 +11,11 @@ import logging
 import os
 import threading
 
-from pyfunvice import faas, start_faas, start_fass_with_uvicorn, start_fass_with_cmd
+from pyfunvice import (
+    app_service,
+    start_app,
+    get_app_instance,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="[%(asctime)s] [%(thread)d] [%(levelname)s] %(message)s"
@@ -82,7 +86,7 @@ def inner_process(
     return pages
 
 
-@faas(path="/api/v1/parser/ppl/layout", inparam_type="flat")
+@app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")
 async def process(pages: list[Page]):
     logging.info(
         f"POST request, pid: {os.getpid()}, thread id: {threading.current_thread().ident}"
@@ -95,4 +99,7 @@ async def process(pages: list[Page]):
 
 
 if __name__ == "__main__":
-    start_faas(workers=settings.WORKER_NUM, port=8001, post_fork_func=post_fork_func)
+    start_app(workers=settings.WORKER_NUM, port=8001, post_fork_func=post_fork_func)
+
+# app = get_app_instance(post_fork_func)
+# poetry run gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
