@@ -1,27 +1,11 @@
-from layoutana.schema import Page
 from layoutana.settings import settings
+from layoutana.schema import Page
+from layoutana.utils import get_page_image
+from layoutana.models import ModelInfo
 
-from transformers import LayoutLMv3ForSequenceClassification, LayoutLMv3Processor
 from copy import deepcopy
 from typing import List
-from PIL import Image
-
-import io
 import torch
-
-from layoutana.utils import get_page_image
-
-
-processor = LayoutLMv3Processor.from_pretrained(settings.ORDERER_MODEL_NAME)
-
-
-def load_ordering_model():
-    model = LayoutLMv3ForSequenceClassification.from_pretrained(
-        settings.ORDERER_MODEL_NAME,
-        torch_dtype=settings.MODEL_DTYPE,
-    ).to(settings.TORCH_DEVICE)
-    model.eval()
-    return model
 
 
 def get_inference_data(inner_page: Page):
@@ -51,8 +35,8 @@ def get_inference_data(inner_page: Page):
     return image, bboxes, words
 
 
-def batch_inference(rgb_images, bboxes, words, model):
-    encoding = processor(
+def batch_inference(model_info: ModelInfo, rgb_images, bboxes, words):
+    encoding = model_info.processor(
         rgb_images,
         text=words,
         boxes=bboxes,
@@ -68,17 +52,17 @@ def batch_inference(rgb_images, bboxes, words, model):
     with torch.inference_mode():
         for k in ["bbox", "input_ids", "pixel_values", "attention_mask"]:
             encoding[k] = encoding[k].to(settings.TORCH_DEVICE)
-        outputs = model(**encoding)
+        outputs = model_info.model(**encoding)
         logits = outputs.logits
 
     predictions = logits.argmax(-1).squeeze().tolist()
     if isinstance(predictions, int):
         predictions = [predictions]
-    predictions = [model.config.id2label[p] for p in predictions]
+    predictions = [model_info.model.config.id2label[p] for p in predictions]
     return predictions
 
 
-def update_column_counts(inner_pages, model, batch_size):
+def update_column_counts(model_info: ModelInfo, inner_pages, batch_size):
     for i in range(0, len(inner_pages), batch_size):
         page_batch = range(i, min(i + batch_size, len(inner_pages)))
         rgb_images = []
@@ -90,17 +74,17 @@ def update_column_counts(inner_pages, model, batch_size):
             bboxes.append(page_bboxes)
             words.append(page_words)
 
-        predictions = batch_inference(rgb_images, bboxes, words, model)
+        predictions = batch_inference(model_info, rgb_images, bboxes, words)
         for pnum, prediction in zip(page_batch, predictions):
             inner_pages[pnum].column_count = prediction
 
 
 def order_blocks(
+    model_info: ModelInfo,
     inner_pages: List[Page],
-    model,
     batch_size=settings.ORDERER_BATCH_SIZE,
 ) -> List[Page]:
-    update_column_counts(inner_pages, model, batch_size)
+    update_column_counts(model_info, inner_pages, batch_size)
 
     for inner_page in inner_pages:
         if inner_page.column_count > 1:

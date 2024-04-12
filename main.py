@@ -1,14 +1,28 @@
-from layoutana.headers import filter_header_footer
-from layoutana.ordering import load_ordering_model, order_blocks
-from layoutana.schema import BlockType, Page, Span
-from layoutana.segmentation import get_pages_types, load_segment_model
 from layoutana.settings import settings
+from layoutana.headers import filter_header_footer
+from layoutana.ordering import order_blocks
+from layoutana.schema import BlockType, Page, Span
+from layoutana.segmentation import get_pages_types
 from layoutana.spans import SpanType, SpansAnalyzer
 from layoutana.utils import save_debug_doc_info
+from layoutana.models import ModelInfo, load_ordering_model, load_segment_model
+
+import logging
+import os
+import threading
 
 from pyfunvice import faas, start_faas, start_fass_with_uvicorn, start_fass_with_cmd
 
-model_lst = [load_segment_model(), load_ordering_model()]
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] [%(thread)d] [%(levelname)s] %(message)s"
+)
+
+model_lst: list[ModelInfo] = []
+
+
+def post_fork_func():
+    global model_lst
+    model_lst = [load_segment_model(), load_ordering_model()]
 
 
 def annotate_spans_type(pages: list[Page], pages_types: list[list[BlockType]]):
@@ -35,10 +49,10 @@ def inner_process(
     debug_mode: bool = False,
 ):
     # Unpack models from list
-    segment_model, order_model = model_lst
+    segment_model_info, order_model_info = model_lst
     out_meta: dict = {}
     pages_types: list[list[BlockType]] = get_pages_types(
-        segment_model,
+        segment_model_info,
         pages,
         batch_size=settings.LAYOUT_BATCH_SIZE * parallel_factor,
         debug_mode=debug_mode,
@@ -61,8 +75,8 @@ def inner_process(
     # update_equations_in_spans(pages, pages_types)
 
     pages = order_blocks(
+        order_model_info,
         pages,
-        order_model,
         batch_size=settings.ORDERER_BATCH_SIZE * parallel_factor,
     )
     return pages
@@ -70,12 +84,15 @@ def inner_process(
 
 @faas(path="/api/v1/parser/ppl/layout", inparam_type="flat")
 async def process(pages: list[Page]):
+    logging.info(
+        f"POST request, pid: {os.getpid()}, thread id: {threading.current_thread().ident}"
+    )
     pages_instance: list[Page] = []
     for page in pages:
         pages_instance.append(Page(**page))
-    pages = inner_process(pages_instance, settings.DEBUG)
+    pages = inner_process(pages=pages_instance, debug_mode=settings.DEBUG)
     return {"pages": pages}
 
 
 if __name__ == "__main__":
-    start_fass_with_uvicorn(workers=settings.WORKER_NUM, port=8001)
+    start_faas(workers=settings.WORKER_NUM, port=8001, post_fork_func=post_fork_func)

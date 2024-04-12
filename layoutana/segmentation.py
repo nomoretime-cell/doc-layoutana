@@ -2,10 +2,9 @@ from layoutana.utils import get_page_image, save_debug_info
 from layoutana.settings import settings
 from layoutana.schema import Page, BlockType
 from layoutana.bbox import unnormalize_box
+from layoutana.models import ModelInfo
 
-from transformers import LayoutLMv3ForTokenClassification
 from transformers.models.layoutlmv3.image_processing_layoutlmv3 import normalize_box
-from transformers import LayoutLMv3Processor
 from PIL import ImageDraw, ImageFont, Image
 
 import logging
@@ -16,36 +15,9 @@ import torch
 # Otherwise some images can be truncated
 Image.MAX_IMAGE_PIXELS = None
 
-processor = LayoutLMv3Processor.from_pretrained(
-    settings.LAYOUT_MODEL_NAME, apply_ocr=False
-)
 
 CHUNK_KEYS = ["input_ids", "attention_mask", "bbox", "offset_mapping"]
 NO_CHUNK_KEYS = ["pixel_values"]
-
-
-def load_segment_model():
-    model = LayoutLMv3ForTokenClassification.from_pretrained(
-        settings.LAYOUT_MODEL_NAME,
-        torch_dtype=settings.MODEL_DTYPE,
-    ).to(settings.TORCH_DEVICE)
-
-    model.config.id2label = {
-        0: "Caption",
-        1: "Footnote",
-        2: "Formula",
-        3: "List-item",
-        4: "Page-footer",
-        5: "Page-header",
-        6: "Picture",
-        7: "Section-header",
-        8: "Table",
-        9: "Text",
-        10: "Title",
-    }
-
-    model.config.label2id = {v: k for k, v in model.config.id2label.items()}
-    return model
 
 
 def get_line_info(inner_page, page_pt_box):
@@ -75,7 +47,7 @@ def get_line_info(inner_page, page_pt_box):
     return line_pt_box_vector, line_text_vector
 
 
-def get_page_encoding(inner_page: Page):
+def get_page_encoding(processor, inner_page: Page):
     if len(inner_page.get_all_lines()) == 0:
         return [], [], []
 
@@ -153,13 +125,13 @@ def get_provisional_boxes(pred, box, is_subword, start_idx=0):
     return prov_predictions, prov_boxes
 
 
-def get_encoding(pages: list[Page]):
+def get_encoding(processor, pages: list[Page]):
     images = []
     encodings = []
     pages_metadata = []
     pages_sample = []
     for idx in range(len(pages)):
-        image, encoding, other_data = get_page_encoding(pages[idx])
+        image, encoding, other_data = get_page_encoding(processor, pages[idx])
         encodings.extend(encoding)
         pages_metadata.append(other_data)
         pages_sample.append(len(encoding))
@@ -304,15 +276,17 @@ def save_result(pages, images, pages_types):
 
 
 def get_pages_types(
-    model,
+    model_info: ModelInfo,
     pages: list[Page],
     batch_size=settings.LAYOUT_BATCH_SIZE,
     debug_mode=False,
 ) -> list[list[BlockType]]:
-    images, encodings, pages_metadata, pages_sample = get_encoding(pages)
-    predictions = predict(encodings, model, batch_size)
+    images, encodings, pages_metadata, pages_sample = get_encoding(
+        model_info.processor, pages
+    )
+    predictions = predict(encodings, model_info.model, batch_size)
     pages_types = match_predict(
-        encodings, pages_metadata, pages_sample, model, predictions
+        encodings, pages_metadata, pages_sample, model_info.model, predictions
     )
     assert len(pages_types) == len(pages)
     if debug_mode:
