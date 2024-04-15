@@ -1,3 +1,4 @@
+from layoutana.picture import extend_picture_blocks, merge_picture_blocks
 from layoutana.settings import settings
 from layoutana.headers import filter_header_footer
 from layoutana.ordering import order_blocks
@@ -87,6 +88,10 @@ def inner_process(
     
     # Detect tables
     detect_tables(pages, debug_mode)
+    
+    # picture blocks
+    merge_picture_blocks(pages)
+    extend_picture_blocks(pages, debug_mode)
     
     return pages
 

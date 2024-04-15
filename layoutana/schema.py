@@ -117,6 +117,7 @@ class ImageInfo(BaseModel):
 
 class Block(BboxElement):
     table_pixel_bbox: Optional[List[float]] = None
+    picture_pixel_bbox: Optional[List[float]] = None
     lines: List[Line]
     pnum: int
 
