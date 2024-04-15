@@ -4,6 +4,7 @@ from layoutana.ordering import order_blocks
 from layoutana.schema import BlockType, Page, Span
 from layoutana.segmentation import get_pages_types
 from layoutana.spans import SpanType, SpansAnalyzer
+from layoutana.table import detect_tables
 from layoutana.utils import save_debug_doc_info
 from layoutana.models import ModelInfo, load_ordering_model, load_segment_model
 
@@ -83,6 +84,10 @@ def inner_process(
         pages,
         batch_size=settings.ORDERER_BATCH_SIZE * parallel_factor,
     )
+    
+    # Detect tables
+    detect_tables(pages, debug_mode)
+    
     return pages
 
 

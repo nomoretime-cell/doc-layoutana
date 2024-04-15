@@ -106,7 +106,17 @@ class Line(BboxElement):
         return self.spans[0].bbox[0]
 
 
+class ImageInfo(BaseModel):
+    content_base64: str
+    height: float
+    width: float
+    pt_bbox: list[float]
+    pt_height: float
+    pt_width: float
+
+
 class Block(BboxElement):
+    table_pixel_bbox: Optional[List[float]] = None
     lines: List[Line]
     pnum: int
 
@@ -152,15 +162,6 @@ class Block(BboxElement):
         for line in self.lines:
             for span in line.spans:
                 span.block_type = block_type
-
-
-class ImageInfo(BaseModel):
-    content_base64: str
-    height: float
-    width: float
-    pt_bbox: list[float]
-    pt_height: float
-    pt_width: float
 
 
 class Page(BboxElement):

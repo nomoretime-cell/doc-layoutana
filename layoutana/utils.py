@@ -1,5 +1,6 @@
 from layoutana.bbox import merge_boxes
 from layoutana.schema import Block, Page
+from layoutana.settings import settings
 
 from typing import Callable, List, TypeVar
 from copy import deepcopy
@@ -10,10 +11,23 @@ import os
 import base64
 
 
-def get_page_image(inner_page: Page):
+def convert_doc_to_pixel_coords(doc_bbox, dpi):
+    """Convert document coordinates to pixel coordinates based on DPI."""
+    x1, y1, x2, y2 = doc_bbox
+    scale_factor = dpi / 72
+    px1 = int(x1 * scale_factor)
+    py1 = int(y1 * scale_factor)
+    px2 = int(x2 * scale_factor)
+    py2 = int(y2 * scale_factor)
+    return (px1, py1, px2, py2)
+
+
+def get_page_image(inner_page: Page, crop_bbox: list[float] = None):
     image_byte = base64.b64decode(inner_page.image_info.content_base64)
     buffered = io.BytesIO(image_byte)
     image = Image.open(buffered)
+    if crop_bbox is not None:
+        image = image.crop(convert_doc_to_pixel_coords(crop_bbox, settings.NOUGAT_DPI))
     return (
         image,
         inner_page.image_info.pt_bbox,
