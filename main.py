@@ -1,8 +1,9 @@
-from layoutana.picture import extend_picture_blocks, merge_picture_blocks
+from layoutana.equations import detect_equations
+from layoutana.picture import detect_pictures
 from layoutana.settings import settings
 from layoutana.headers import filter_header_footer
 from layoutana.ordering import order_blocks
-from layoutana.schema import BlockType, Page, Span
+from layoutana.schema import BlockImage, BlockType, Page, Span
 from layoutana.segmentation import get_pages_types
 from layoutana.spans import SpanType, SpansAnalyzer
 from layoutana.table import detect_tables
@@ -85,15 +86,22 @@ def inner_process(
         pages,
         batch_size=settings.ORDERER_BATCH_SIZE * parallel_factor,
     )
-    
+
+    block_image: BlockImage = BlockImage()
+
     # Detect tables
-    detect_tables(pages, debug_mode)
-    
-    # picture blocks
-    merge_picture_blocks(pages)
-    extend_picture_blocks(pages, debug_mode)
-    
-    return pages
+    tables_info = detect_tables(pages, debug_mode)
+
+    # Detect pictures
+    pictures_info = detect_pictures(pages, debug_mode)
+
+    # Detect equations
+    equations_info = detect_equations(pages, debug_mode)
+
+    block_image.tables_info = tables_info
+    block_image.pictures_info = pictures_info
+    block_image.equations_info = equations_info
+    return pages, block_image
 
 
 @app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")
@@ -104,8 +112,8 @@ async def process(pages: list[Page]):
     pages_instance: list[Page] = []
     for page in pages:
         pages_instance.append(Page(**page))
-    pages = inner_process(pages=pages_instance, debug_mode=settings.DEBUG)
-    return {"pages": pages}
+    pages, block_image = inner_process(pages=pages_instance, debug_mode=settings.DEBUG)
+    return {"block_image": block_image, "pages": pages}
 
 
 if __name__ == "__main__":

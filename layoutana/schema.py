@@ -115,6 +115,25 @@ class ImageInfo(BaseModel):
     pt_width: float
 
 
+class TableInfo(BaseModel):
+    content_base64: str
+    page_idx: int
+    block_idx: int
+    table_text: str
+
+
+class PictureInfo(BaseModel):
+    content_base64: str
+    page_idx: int
+    block_idx: int
+
+
+class EquationInfo(BaseModel):
+    content_base64: str
+    page_idx: int
+    block_idx: int
+
+
 class Block(BboxElement):
     table_pixel_bbox: Optional[List[float]] = None
     picture_pixel_bbox: Optional[List[float]] = None
@@ -163,6 +182,12 @@ class Block(BboxElement):
         for line in self.lines:
             for span in line.spans:
                 span.block_type = block_type
+
+
+class BlockImage(BaseModel):
+    tables_info: Optional[List[TableInfo]] = None
+    pictures_info: Optional[List[PictureInfo]] = None
+    equations_info: Optional[List[EquationInfo]] = None
 
 
 class Page(BboxElement):

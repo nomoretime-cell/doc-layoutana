@@ -1,18 +1,21 @@
 from layoutana.bbox import merge_boxes
-from layoutana.table import get_image_bytes
-from layoutana.utils import convert_doc_to_pixel_coords, save_debug_info, merge_target_blocks, set_block_type
-from layoutana.schema import Block, Page
+from layoutana.utils import (
+    convert_doc_to_pixel_coords,
+    get_image_base64,
+    get_image_bytes,
+    save_debug_info,
+    merge_target_blocks,
+    set_block_type,
+)
+from layoutana.schema import Block, Page, PictureInfo
 from layoutana.settings import settings
 
 import io
 
 
-
-def merge_picture_blocks(pages: list[Page]):
+def detect_pictures(pages: list[Page], debug_mode: bool):
     merge_target_blocks(pages, "Picture")
-
-
-def extend_picture_blocks(pages: list[Page], debug_mode: bool):
+    pictures_info: list[PictureInfo] = []
     for page_idx, page in enumerate(pages):
         for block_idx, block in enumerate(page.blocks):
             if block.most_common_block_type() != "Picture":
@@ -48,8 +51,8 @@ def extend_picture_blocks(pages: list[Page], debug_mode: bool):
                 continue
 
             # get picture image
-            picture_image: io.BytesIO = get_image_bytes(page, merged_bbox)
-            if picture_image is None:
+            image_bytes: io.BytesIO = get_image_bytes(page, merged_bbox)
+            if image_bytes is None:
                 continue
 
             # picture pixel bbox
@@ -58,4 +61,12 @@ def extend_picture_blocks(pages: list[Page], debug_mode: bool):
 
             # save picture image
             if debug_mode:
-                save_debug_info(picture_image, "picture", page_idx, block_idx)
+                save_debug_info(image_bytes, "picture", page_idx, block_idx)
+            pictures_info.append(
+                PictureInfo(
+                    content_base64=get_image_base64(image_bytes),
+                    page_idx=page_idx,
+                    block_idx=block_idx,
+                )
+            )
+    return pictures_info

@@ -1,14 +1,14 @@
-import logging
 from layoutana.bbox import merge_boxes
 from layoutana.utils import (
     convert_doc_to_pixel_coords,
-    get_page_image,
+    get_image_base64,
+    get_image_bytes,
     save_debug_info,
     merge_target_blocks,
     set_block_type,
     set_special_block_type,
 )
-from layoutana.schema import Line, Span, Block, Page
+from layoutana.schema import Line, Span, Block, Page, TableInfo
 from layoutana.settings import settings
 
 from tabulate import tabulate
@@ -183,30 +183,11 @@ def table_to_markdown(table: List[List[str]], block: Block, table_idx: int):
     return new_text
 
 
-def get_image_bytes(page: Page, merged_block_bbox):
-    try:
-        png_image, _, _, _ = get_page_image(page, merged_block_bbox)
-        png_image = png_image.convert("RGB")
-
-        img_out = io.BytesIO()
-        png_image.save(img_out, format="BMP")
-        return img_out
-
-    except Exception as exception:
-        logging.error(exception)
-        return None
-
-
-def get_table_image(page: Page, table_bbox):
-    table_image: io.BytesIO = get_image_bytes(page, table_bbox)
-    if table_image is None:
-        return None
-    return table_image
-
-
 def detect_tables(pages: List[Page], debug_mode: bool = False):
     merge_target_blocks(pages, "Table")
     table_idx = 0
+
+    tables_info: list[TableInfo] = []
     for page_idx, page in enumerate(pages):
         for block_idx, block in enumerate(page.blocks):
             if block.most_common_block_type() != "Table":
@@ -220,9 +201,8 @@ def detect_tables(pages: List[Page], debug_mode: bool = False):
             if not is_success:
                 continue
 
-
-            image = get_table_image(pages[page_idx], table_bbox)
-            if image is None:
+            image_bytes = get_image_bytes(pages[page_idx], table_bbox)
+            if image_bytes is None:
                 continue
 
             # recognition_table_pdfplumber(pdfp.pages[page_idx], table_bbox, block, table_idx, True)
@@ -231,11 +211,24 @@ def detect_tables(pages: List[Page], debug_mode: bool = False):
             # table pixel bbox
             pixel_bbox = convert_doc_to_pixel_coords(table_bbox, settings.NOUGAT_DPI)
             block.table_pixel_bbox = pixel_bbox
-            
+
             # save result
             if debug_mode:
                 save_debug_info(
-                    image, "table", page_idx, block_idx, [table_text, "predictions"]
+                    image_bytes,
+                    "table",
+                    page_idx,
+                    block_idx,
+                    [table_text, "predictions"],
                 )
 
+            tables_info.append(
+                TableInfo(
+                    content_base64=get_image_base64(image_bytes),
+                    page_idx=page_idx,
+                    block_idx=block_idx,
+                    table_text=table_text,
+                )
+            )
             table_idx += 1
+    return tables_info

@@ -1,3 +1,4 @@
+import logging
 from layoutana.bbox import merge_boxes
 from layoutana.schema import Block, Page
 from layoutana.settings import settings
@@ -34,6 +35,26 @@ def get_page_image(inner_page: Page, crop_bbox: list[float] = None):
         inner_page.image_info.pt_width,
         inner_page.image_info.pt_height,
     )
+
+
+def get_image_bytes(page: Page, merged_block_bbox):
+    try:
+        png_image, _, _, _ = get_page_image(page, merged_block_bbox)
+        png_image = png_image.convert("RGB")
+
+        img_out = io.BytesIO()
+        png_image.save(img_out, format="PNG")
+        if img_out is None:
+            return None
+        return img_out
+
+    except Exception as exception:
+        logging.error(exception)
+        return None
+
+
+def get_image_base64(image_bytesIo: io.BytesIO):
+    return base64.b64encode(image_bytesIo.getvalue()).decode("utf-8")
 
 
 def set_block_type(block: Block, type: str):
