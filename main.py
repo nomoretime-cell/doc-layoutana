@@ -3,7 +3,7 @@ from layoutana.picture import detect_pictures
 from layoutana.settings import settings
 from layoutana.headers import filter_header_footer
 from layoutana.ordering import order_blocks
-from layoutana.schema import BlockImage, BlockType, Page, Span
+from layoutana.schema import BlockImage, BlockType, ImageInfo, Page, Span
 from layoutana.segmentation import get_pages_types
 from layoutana.spans import SpanType, SpansAnalyzer
 from layoutana.table import detect_tables
@@ -105,15 +105,22 @@ def inner_process(
 
 
 @app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")
-async def process(pages: list[Page]):
+async def process(image_info: ImageInfo, page_info: Page):
     logging.info(
         f"POST request, pid: {os.getpid()}, thread id: {threading.current_thread().ident}"
     )
     pages_instance: list[Page] = []
-    for page in pages:
-        pages_instance.append(Page(**page))
+    
+    page_info["image_info"] = image_info
+    pages_instance.append(Page(**page_info))
     pages, block_image = inner_process(pages=pages_instance, debug_mode=settings.DEBUG)
-    return {"block_image": block_image, "pages": pages}
+    
+    result_array = []
+    result_array.extend(block_image.tables_info)
+    result_array.extend(block_image.pictures_info)
+    result_array.extend(block_image.equations_info)
+    result_array.extend(pages)
+    return result_array
 
 
 if __name__ == "__main__":

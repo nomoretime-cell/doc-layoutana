@@ -275,6 +275,7 @@ def detect_inline_equations_v2(
             save_debug_info(equation_image, "inline_equations", page_idx, block_idx)
         equations_info.append(
             EquationInfo(
+                type="equation",
                 content_base64=get_image_base64(equation_image),
                 page_idx=page_idx,
                 block_idx=block_idx,

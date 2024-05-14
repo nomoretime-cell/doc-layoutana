@@ -116,19 +116,22 @@ class ImageInfo(BaseModel):
 
 
 class TableInfo(BaseModel):
+    type: str
     content_base64: str
     page_idx: int
     block_idx: int
-    table_text: str
+    text: str
 
 
 class PictureInfo(BaseModel):
+    type: str
     content_base64: str
     page_idx: int
     block_idx: int
 
 
 class EquationInfo(BaseModel):
+    type: str
     content_base64: str
     page_idx: int
     block_idx: int
@@ -191,6 +194,7 @@ class BlockImage(BaseModel):
 
 
 class Page(BboxElement):
+    type: str = "text"
     blocks: List[Block]
     pnum: int
     text_font: Optional[int] = None

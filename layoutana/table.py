@@ -224,10 +224,11 @@ def detect_tables(pages: List[Page], debug_mode: bool = False):
 
             tables_info.append(
                 TableInfo(
+                    type = "table",
                     content_base64=get_image_base64(image_bytes),
                     page_idx=page_idx,
                     block_idx=block_idx,
-                    table_text=table_text,
+                    text=table_text,
                 )
             )
             table_idx += 1

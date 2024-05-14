@@ -64,6 +64,7 @@ def detect_pictures(pages: list[Page], debug_mode: bool):
                 save_debug_info(image_bytes, "picture", page_idx, block_idx)
             pictures_info.append(
                 PictureInfo(
+                    type="picture",
                     content_base64=get_image_base64(image_bytes),
                     page_idx=page_idx,
                     block_idx=block_idx,
