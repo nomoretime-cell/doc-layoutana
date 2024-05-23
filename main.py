@@ -21,6 +21,7 @@ from layoutana.utils import (
     get_image_bytes,
     merge_target_blocks,
     save_debug_doc_info,
+    save_debug_info,
 )
 from layoutana.models import ModelInfo, load_ordering_model, load_segment_model
 
@@ -109,38 +110,54 @@ def inner_process(
     # pictures_info = detect_pictures(pages, debug_mode)
     # # Detect equations
     # equations_info = detect_equations(pages, debug_mode)
-    
-    tables_info, pictures_info, equations_info = detect_all(pages)
+
+    tables_info, pictures_info, equations_info, type_block_num = detect_all(pages)
 
     block_image.tables_info = tables_info
     block_image.pictures_info = pictures_info
     block_image.equations_info = equations_info
+
+    pages[0].type_block_idx = type_block_num - 1
+    pages[0].type_block_num = type_block_num
+    pages[0].block_idx = len(pages[0].blocks)
     return pages, block_image
 
 
+global_page_idx = 0
+
+
 def detect_all(pages):
+    global global_page_idx
     tables_info: list[TableInfo] = []
     pictures_info: list[PictureInfo] = []
     equations_info: list[EquationInfo] = []
-    
+
     merge_target_blocks(pages, "Table")
     merge_target_blocks(pages, "Picture")
     merge_target_blocks(pages, "Formula")
-    
+
     for page_idx, page in enumerate(pages):
+        global_page_idx = global_page_idx + 1
         for block_idx, block in enumerate(page.blocks):
             image_bytes = get_image_bytes(pages[page_idx], block.bbox)
             if image_bytes is None:
                 continue
             if block.most_common_block_type() == "Table":
+                table_text = recognition_table(block, block_idx, False)
                 tables_info.append(
                     TableInfo(
                         type="table",
                         content_base64=get_image_base64(image_bytes),
                         block_idx=block_idx,
-                        block_num=len(page.blocks),
-                        text=recognition_table(block, block_idx, False),
+                        text=table_text,
                     )
+                )
+                save_debug_info(
+                    image_bytes,
+                    "table",
+                    global_page_idx,
+                    block_idx,
+                    [table_text, "predictions"],
                 )
             elif block.most_common_block_type() == "Picture":
                 pictures_info.append(
@@ -148,19 +165,34 @@ def detect_all(pages):
                         type="picture",
                         content_base64=get_image_base64(image_bytes),
                         block_idx=block_idx,
-                        block_num=len(page.blocks),
                     )
                 )
+                save_debug_info(image_bytes, "picture", global_page_idx, block_idx)
             elif block.most_common_block_type() == "Formula":
                 equations_info.append(
                     EquationInfo(
                         type="equation",
                         content_base64=get_image_base64(image_bytes),
                         block_idx=block_idx,
-                        block_num=len(page.blocks),
                     )
                 )
-    return tables_info, pictures_info, equations_info
+                save_debug_info(image_bytes, "equations", global_page_idx, block_idx)
+
+    type_block_idx = 0
+    type_block_num = len(tables_info) + len(pictures_info) + len(equations_info) + 1
+    for _, table in enumerate(tables_info):
+        table.type_block_idx = type_block_idx
+        type_block_idx = type_block_idx + 1
+        table.type_block_num = type_block_num
+    for _, picture in enumerate(pictures_info):
+        picture.type_block_idx = type_block_idx
+        type_block_idx = type_block_idx + 1
+        picture.type_block_num = type_block_num
+    for _, equation in enumerate(equations_info):
+        equation.type_block_idx = type_block_idx
+        type_block_idx = type_block_idx + 1
+        equation.type_block_num = type_block_num
+    return tables_info, pictures_info, equations_info, type_block_num
 
 
 @app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")

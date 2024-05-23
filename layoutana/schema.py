@@ -120,7 +120,8 @@ class TableInfo(BaseModel):
     type: str
     content_base64: str
     block_idx: int
-    block_num: int
+    type_block_idx: Optional[int] = None
+    type_block_num: Optional[int] = None
     text: str
 
 
@@ -128,14 +129,16 @@ class PictureInfo(BaseModel):
     type: str
     content_base64: str
     block_idx: int
-    block_num: int
+    type_block_idx: Optional[int] = None
+    type_block_num: Optional[int] = None
 
 
 class EquationInfo(BaseModel):
     type: str
     content_base64: str
     block_idx: int
-    block_num: int
+    type_block_idx: Optional[int] = None
+    type_block_num: Optional[int] = None
 
 
 class Block(BboxElement):
@@ -196,6 +199,10 @@ class BlockImage(BaseModel):
 
 class Page(BboxElement):
     type: str = "text"
+    block_idx: Optional[int] = None
+    type_block_idx: Optional[int] = None
+    type_block_num: Optional[int] = None
+    
     blocks: List[Block]
     pnum: int
     text_font: Optional[int] = None
