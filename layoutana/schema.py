@@ -113,28 +113,29 @@ class ImageInfo(BaseModel):
     pt_bbox: list[float]
     pt_height: float
     pt_width: float
+    dpi: int
 
 
 class TableInfo(BaseModel):
     type: str
     content_base64: str
-    page_idx: int
     block_idx: int
+    block_num: int
     text: str
 
 
 class PictureInfo(BaseModel):
     type: str
     content_base64: str
-    page_idx: int
     block_idx: int
+    block_num: int
 
 
 class EquationInfo(BaseModel):
     type: str
     content_base64: str
-    page_idx: int
     block_idx: int
+    block_num: int
 
 
 class Block(BboxElement):

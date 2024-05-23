@@ -1,13 +1,27 @@
-from layoutana.equations import detect_equations
-from layoutana.picture import detect_pictures
 from layoutana.settings import settings
 from layoutana.headers import filter_header_footer
 from layoutana.ordering import order_blocks
-from layoutana.schema import BlockImage, BlockType, ImageInfo, Page, Span
+from layoutana.schema import (
+    BlockImage,
+    BlockType,
+    EquationInfo,
+    ImageInfo,
+    Page,
+    PictureInfo,
+    Span,
+    TableInfo,
+)
 from layoutana.segmentation import get_pages_types
 from layoutana.spans import SpanType, SpansAnalyzer
-from layoutana.table import detect_tables
-from layoutana.utils import save_debug_doc_info
+from layoutana.table import detect_tables, recognition_table
+from layoutana.equations import detect_equations
+from layoutana.picture import detect_pictures
+from layoutana.utils import (
+    get_image_base64,
+    get_image_bytes,
+    merge_target_blocks,
+    save_debug_doc_info,
+)
 from layoutana.models import ModelInfo, load_ordering_model, load_segment_model
 
 import logging
@@ -89,19 +103,64 @@ def inner_process(
 
     block_image: BlockImage = BlockImage()
 
-    # Detect tables
-    tables_info = detect_tables(pages, debug_mode)
-
-    # Detect pictures
-    pictures_info = detect_pictures(pages, debug_mode)
-
-    # Detect equations
-    equations_info = detect_equations(pages, debug_mode)
+    # # Detect tables
+    # tables_info = detect_tables(pages, debug_mode)
+    # # Detect pictures
+    # pictures_info = detect_pictures(pages, debug_mode)
+    # # Detect equations
+    # equations_info = detect_equations(pages, debug_mode)
+    
+    tables_info, pictures_info, equations_info = detect_all(pages)
 
     block_image.tables_info = tables_info
     block_image.pictures_info = pictures_info
     block_image.equations_info = equations_info
     return pages, block_image
+
+
+def detect_all(pages):
+    tables_info: list[TableInfo] = []
+    pictures_info: list[PictureInfo] = []
+    equations_info: list[EquationInfo] = []
+    
+    merge_target_blocks(pages, "Table")
+    merge_target_blocks(pages, "Picture")
+    merge_target_blocks(pages, "Formula")
+    
+    for page_idx, page in enumerate(pages):
+        for block_idx, block in enumerate(page.blocks):
+            image_bytes = get_image_bytes(pages[page_idx], block.bbox)
+            if image_bytes is None:
+                continue
+            if block.most_common_block_type() == "Table":
+                tables_info.append(
+                    TableInfo(
+                        type="table",
+                        content_base64=get_image_base64(image_bytes),
+                        block_idx=block_idx,
+                        block_num=len(page.blocks),
+                        text=recognition_table(block, block_idx, False),
+                    )
+                )
+            elif block.most_common_block_type() == "Picture":
+                pictures_info.append(
+                    PictureInfo(
+                        type="picture",
+                        content_base64=get_image_base64(image_bytes),
+                        block_idx=block_idx,
+                        block_num=len(page.blocks),
+                    )
+                )
+            elif block.most_common_block_type() == "Formula":
+                equations_info.append(
+                    EquationInfo(
+                        type="equation",
+                        content_base64=get_image_base64(image_bytes),
+                        block_idx=block_idx,
+                        block_num=len(page.blocks),
+                    )
+                )
+    return tables_info, pictures_info, equations_info
 
 
 @app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")
@@ -110,11 +169,11 @@ async def process(image_info: ImageInfo, page_info: Page):
         f"POST request, pid: {os.getpid()}, thread id: {threading.current_thread().ident}"
     )
     pages_instance: list[Page] = []
-    
+
     page_info["image_info"] = image_info
     pages_instance.append(Page(**page_info))
     pages, block_image = inner_process(pages=pages_instance, debug_mode=settings.DEBUG)
-    
+
     result_array = []
     result_array.extend(block_image.tables_info)
     result_array.extend(block_image.pictures_info)

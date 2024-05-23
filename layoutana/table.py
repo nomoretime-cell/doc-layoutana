@@ -226,8 +226,8 @@ def detect_tables(pages: List[Page], debug_mode: bool = False):
                 TableInfo(
                     type = "table",
                     content_base64=get_image_base64(image_bytes),
-                    page_idx=page_idx,
                     block_idx=block_idx,
+                    block_num=len(page.blocks),
                     text=table_text,
                 )
             )
