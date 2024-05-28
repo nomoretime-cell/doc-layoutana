@@ -943,9 +943,10 @@ name = "pyfunvice"
 version = "0.1.6"
 description = ""
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = "<4.0,>=3.11"
 files = [
     {file = "pyfunvice-0.1.6-py3-none-any.whl", hash = "sha256:320ebf4eb82c26bbba497e0124e0554f81a86064ae5a7cd23aa7eb4de8a6579c"},
+    {file = "pyfunvice-0.1.6.tar.gz", hash = "sha256:c87ee9343456bd01403cbb895bcdfe7cc36fb8c9eade7ea5185ee9bfb1fe5ea3"},
 ]
 
 [package.dependencies]
@@ -955,10 +956,6 @@ fastapi = ">=0.110.0,<0.111.0"
 gunicorn = ">=21.2.0,<22.0.0"
 python-multipart = ">=0.0.9,<0.0.10"
 uvicorn = ">=0.29.0,<0.30.0"
-
-[package.source]
-type = "file"
-url = "../pyfunvice/dist/pyfunvice-0.1.6-py3-none-any.whl"
 
 [[package]]
 name = "python-dotenv"
@@ -1924,4 +1921,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "8d5363ce506219e04aff3ff6a5c5140218ccab5ab564c0c49a7f1dcd694dd94b"
+content-hash = "43eb16697fafa3ec04a0b39c84169daaf95c869bb3c855057342d0c87c774fb8"
