@@ -89,7 +89,7 @@ def inner_process(
     # Get text font size
     spans: list[Span] = get_all_spans(pages)
     spans_analyzer = SpansAnalyzer(spans)
-    if len(spans_analyzer.type2fontSize[SpanType.Text.value]) > 0:
+    if (SpanType.Text.value in spans_analyzer.type2fontSize) and len(spans_analyzer.type2fontSize[SpanType.Text.value]) > 0:
         for page in pages:
             page.text_font = spans_analyzer.type2fontSize[SpanType.Text.value][
                 0
