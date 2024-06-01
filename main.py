@@ -196,9 +196,12 @@ def detect_all(pages):
 
 
 @app_service(path="/api/v1/parser/ppl/layout", inparam_type="flat")
-async def process(image_info: ImageInfo, page_info: Page):
+async def process(requestId: str, image_info: dict, page_info: dict):
     logging.info(
-        f"POST request, pid: {os.getpid()}, thread id: {threading.current_thread().ident}"
+        "POST request"
+        + f" [P{os.getpid()}][T{threading.current_thread().ident}][{requestId}] "
+        + f"page_num: {page_info['pnum']}"
+        + f", image_width: {image_info['width']}, image_height: {image_info['height']}, dpi: {image_info['dpi']}"
     )
     pages_instance: list[Page] = []
 
@@ -211,6 +214,14 @@ async def process(image_info: ImageInfo, page_info: Page):
     result_array.extend(block_image.pictures_info)
     result_array.extend(block_image.equations_info)
     result_array.extend(pages)
+    logging.info(
+        "Return result"
+        + f" [P{os.getpid()}][T{threading.current_thread().ident}][{requestId}] "
+        + f"tables_size: {len(block_image.tables_info)}"
+        + f", pictures_size: {len(block_image.pictures_info)}"
+        + f", equations_size: {len(block_image.equations_info)}"
+        + f", pages_size: {len(pages)}"
+    )
     return result_array
 
 
