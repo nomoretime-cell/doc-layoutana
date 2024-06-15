@@ -1,3 +1,4 @@
+import datetime
 from layoutana.settings import settings
 from layoutana.headers import filter_header_footer
 from layoutana.ordering import order_blocks
@@ -32,7 +33,7 @@ import threading
 from pyfunvice import (
     app_service,
     start_app,
-    get_app_instance,
+    app_service_get,
 )
 
 logging.basicConfig(
@@ -224,9 +225,14 @@ async def process(requestId: str, image_info: dict, page_info: dict):
     )
     return result_array
 
+@app_service_get(path="/health")
+async def health(data: dict) -> dict:
+    time_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {"timestamp": time_string}
+
 
 if __name__ == "__main__":
-    start_app(workers=settings.WORKER_NUM, port=8001, post_fork_func=post_fork_func)
+    start_app(workers=settings.WORKER_NUM, port=8000, post_fork_func=post_fork_func)
 
 # app = get_app_instance(post_fork_func)
 # poetry run gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
